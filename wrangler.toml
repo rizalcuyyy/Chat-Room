@@ -1,15 +1,12 @@
-name = "chatroom-worker"
+name = "chatroom"
 main = "worker.js"
 compatibility_date = "2025-06-08"
+compatibility_flags = ["durable_object_alarms"]
 
 [[durable_objects.bindings]]
 name = "CHAT_ROOM"
 class_name = "ChatRoom"
 
-[[migrations]]
-tag = "v1"
-new_sqlite_classes = ["ChatRoom"]
-
 [[kv_namespaces]]
-binding = "CHAT_LOG"
-id = "42d0ad2b23bd41bca7d5c2af7dcb6f18"
+binding = "CHAT_LOG" # optional jika mau KV tambahan
+id = "42d0ad2b23bd41bca7d5c2af7dcb6f18" # optional juga
