@@ -1,0 +1,7 @@
+[[durable_objects.bindings]]
+name = "CHAT_ROOM"
+class_name = "ChatRoom"
+
+[[kv_namespaces]]
+binding = "CHAT_LOG"
+id = "42d0ad2b23bd41bca7d5c2af7dcb6f18"
