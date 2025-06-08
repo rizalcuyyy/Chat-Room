@@ -1,5 +1,3 @@
-// worker.js
-
 export class ChatRoom {
   constructor(state) {
     this.state = state;
@@ -12,7 +10,6 @@ export class ChatRoom {
     }
 
     const [client, server] = Object.values(new WebSocketPair());
-
     this.handleSession(server);
 
     return new Response(null, {
@@ -37,7 +34,7 @@ export class ChatRoom {
 
   broadcast(message, sender) {
     for (const client of this.clients) {
-      if (client !== sender) {
+      if (client !== sender && client.readyState === 1) {
         try {
           client.send(message);
         } catch (err) {
@@ -57,7 +54,6 @@ export default {
       return await stub.fetch(req);
     }
 
-    // Fallback: show HTML page
     return new Response(await renderHTML(), {
       headers: { "content-type": "text/html" },
     });
