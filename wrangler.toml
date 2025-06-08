@@ -3,5 +3,6 @@ main = "worker.js"
 compatibility_date = "2025-06-08"
 
 kv_namespaces = [
-  { binding = "CHAT_LOG", id = "42d0ad2b23bd41bca7d5c2af7dcb6f18" }
+  { binding = "CHAT_LOG"
+  id = "42d0ad2b23bd41bca7d5c2af7dcb6f18" }
 ]
