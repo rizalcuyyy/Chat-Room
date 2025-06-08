@@ -1,12 +1,8 @@
-name = "chatroom"
-main = "worker.js"
+name = "chat-room"
+main = "index.js"
 compatibility_date = "2025-06-08"
-compatibility_flags = ["durable_object_alarms"]
 
-[[durable_objects.bindings]]
-name = "CHAT_ROOM"
-class_name = "ChatRoom"
-
-[[kv_namespaces]]
-binding = "CHAT_LOG" # optional jika mau KV tambahan
-id = "42d0ad2b23bd41bca7d5c2af7dcb6f18" # optional juga
+[durable_objects]
+bindings = [
+  { name = "CHAT_ROOM", class_name = "ChatRoom" }
+]
