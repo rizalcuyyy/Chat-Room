@@ -1,5 +1,5 @@
 # name = "chat-room-kv"
-name = "chat-room"
+name = "chatroom"
 main = "worker.js"
 compatibility_date = "2025-06-08"
 
