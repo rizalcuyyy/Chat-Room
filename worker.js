@@ -10,6 +10,7 @@ export class ChatRoom {
     }
 
     const [client, server] = Object.values(new WebSocketPair());
+
     this.handleSession(server);
 
     return new Response(null, {
@@ -18,15 +19,29 @@ export class ChatRoom {
     });
   }
 
-  handleSession(ws) {
+  async handleSession(ws) {
     ws.accept();
     this.clients.push(ws);
 
-    ws.addEventListener("message", (event) => {
+    // ⏪ Kirim chat lama
+    const logs = await this.state.storage.list({ reverse: false });
+    for (const [, value] of logs) {
+      ws.send(value);
+    }
+
+    // 🔁 Saat user kirim pesan
+    ws.addEventListener("message", async (event) => {
       const message = event.data;
+      const timestamp = Date.now();
+
+      // Simpan ke storage
+      await this.state.storage.put(timestamp.toString(), message);
+
+      // Broadcast ke semua
       this.broadcast(message, ws);
     });
 
+    // ❌ Client keluar
     ws.addEventListener("close", () => {
       this.clients = this.clients.filter((c) => c !== ws);
     });
@@ -34,7 +49,7 @@ export class ChatRoom {
 
   broadcast(message, sender) {
     for (const client of this.clients) {
-      if (client !== sender && client.readyState === 1) {
+      if (client !== sender) {
         try {
           client.send(message);
         } catch (err) {
@@ -54,6 +69,7 @@ export default {
       return await stub.fetch(req);
     }
 
+    // Show HTML chat page
     return new Response(await renderHTML(), {
       headers: { "content-type": "text/html" },
     });
