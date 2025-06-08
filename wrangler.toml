@@ -1,12 +1,7 @@
-name = "chat-room"
+name = "chat-room-kv"
 main = "worker.js"
 compatibility_date = "2025-06-08"
 
-[durable_objects]
-bindings = [
-  { name = "CHAT_ROOM", class_name = "ChatRoom" }
+kv_namespaces = [
+  { binding = "CHAT_LOG", id = "42d0ad2b23bd41bca7d5c2af7dcb6f18" }
 ]
-
-[[migrations]]
-tag = "v1"
-new_classes = ["ChatRoom"]
