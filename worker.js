@@ -1,7 +1,7 @@
 export class ChatRoom {
-  constructor(state) {
+  constructor(state, env) {
     this.state = state;
-    this.clients = [];
+    this.clients = new Set();
   }
 
   async fetch(request) {
@@ -9,108 +9,84 @@ export class ChatRoom {
       return new Response("Expected WebSocket", { status: 400 });
     }
 
-    const [client, server] = Object.values(new WebSocketPair());
-
+    const [client, server] = new WebSocketPair();
     this.handleSession(server);
-
     return new Response(null, {
       status: 101,
       webSocket: client,
     });
   }
 
-  async handleSession(ws) {
-    ws.accept();
-    this.clients.push(ws);
+  async logMessage(message) {
+    let logs = (await this.state.storage.get("logs")) || [];
 
-    // ⏪ Kirim chat lama
-    const logs = await this.state.storage.list({ reverse: false });
-    for (const [, value] of logs) {
-      ws.send(value);
-    }
-
-    // 🔁 Saat user kirim pesan
-    ws.addEventListener("message", async (event) => {
-      const message = event.data;
-      const timestamp = Date.now();
-
-      // Simpan ke storage
-      await this.state.storage.put(timestamp.toString(), message);
-
-      // Broadcast ke semua
-      this.broadcast(message, ws);
+    const timestamp = new Date();
+    logs.push({
+      message,
+      timestamp: timestamp.toISOString(),
     });
 
-    // ❌ Client keluar
-    ws.addEventListener("close", () => {
-      this.clients = this.clients.filter((c) => c !== ws);
-    });
+    await this.state.storage.put("logs", logs);
   }
 
-  broadcast(message, sender) {
-    for (const client of this.clients) {
-      if (client !== sender) {
-        try {
-          client.send(message);
-        } catch (err) {
-          console.error("Send error", err);
+  formatTimestamp(isoString) {
+    const d = new Date(isoString);
+    const pad = (n) => n.toString().padStart(2, "0");
+    const time = `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    const date = `${pad(d.getDate())}-${pad(d.getMonth() + 1)}-${d.getFullYear()}`;
+    return `${time} ${date}`;
+  }
+
+  handleSession(webSocket) {
+    webSocket.accept();
+    this.clients.add(webSocket);
+
+    // Kirim chat history ke user baru
+    this.state.storage.get("logs").then((logs) => {
+      if (logs && logs.length > 0) {
+        for (const log of logs) {
+          if (webSocket.readyState === WebSocket.OPEN) {
+            const formattedTime = this.formatTimestamp(log.timestamp);
+            webSocket.send(`[History] ${formattedTime}: ${log.message}`);
+          }
         }
       }
-    }
+    });
+
+    webSocket.addEventListener("message", async (event) => {
+      const msg = event.data;
+      await this.logMessage(msg);
+
+      // Broadcast pesan ke semua client kecuali pengirim
+      for (const client of this.clients) {
+        if (client !== webSocket && client.readyState === WebSocket.OPEN) {
+          client.send(msg);
+        }
+      }
+    });
+
+    webSocket.addEventListener("close", () => {
+      this.clients.delete(webSocket);
+    });
   }
 }
 
 export default {
-  async fetch(req, env) {
-    const url = new URL(req.url);
-    if (url.pathname === "/ws") {
-      const id = env.CHAT_ROOM.idFromName("global");
-      const stub = env.CHAT_ROOM.get(id);
-      return await stub.fetch(req);
+  async fetch(request, env) {
+    const url = new URL(request.url);
+
+    if (url.pathname === "/logs") {
+      const id = env.CHAT_ROOM.idFromName("global-room");
+      const obj = env.CHAT_ROOM.get(id);
+
+      const logs = (await obj.state.storage.get("logs")) || [];
+      return new Response(JSON.stringify(logs, null, 2), {
+        headers: { "Content-Type": "application/json" },
+      });
     }
 
-    // Show HTML chat page
-    return new Response(await renderHTML(), {
-      headers: { "content-type": "text/html" },
-    });
+    const id = env.CHAT_ROOM.idFromName("global-room");
+    const obj = env.CHAT_ROOM.get(id);
+    return obj.fetch(request);
   },
 };
-
-async function renderHTML() {
-  return `
-  <!DOCTYPE html>
-  <html>
-  <head>
-    <title>Anon Global Chat</title>
-    <style>
-      body { font-family: sans-serif; background: #111; color: #fff; padding: 20px; }
-      #chat { border: 1px solid #555; padding: 10px; height: 400px; overflow-y: auto; background: #222; }
-      input { width: 100%; padding: 10px; margin-top: 10px; border: none; border-radius: 5px; }
-    </style>
-  </head>
-  <body>
-    <h2>🌍 Anonymous Global Chat</h2>
-    <div id="chat"></div>
-    <input id="input" placeholder="Type message and hit enter..." autofocus />
-    <script>
-      const ws = new WebSocket("wss://" + location.host + "/ws");
-      const chat = document.getElementById("chat");
-      const input = document.getElementById("input");
-
-      ws.onmessage = (msg) => {
-        const p = document.createElement("p");
-        p.textContent = msg.data;
-        chat.appendChild(p);
-        chat.scrollTop = chat.scrollHeight;
-      };
-
-      input.addEventListener("keydown", (e) => {
-        if (e.key === "Enter" && input.value.trim()) {
-          ws.send(input.value);
-          input.value = "";
-        }
-      });
-    </script>
-  </body>
-  </html>`;
-}
