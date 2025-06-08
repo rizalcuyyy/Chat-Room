@@ -1,4 +1,4 @@
-name = "chat-room-kv"
+# name = "chat-room-kv"
 name = "chat-room"
 main = "worker.js"
 compatibility_date = "2025-06-08"
