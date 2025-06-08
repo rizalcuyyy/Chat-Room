@@ -1,31 +1,37 @@
 export default {
-  async fetch(request, env) {
-    if (request.method === "POST") {
+  async fetch(request, env, ctx) {
+    const url = new URL(request.url);
+
+    // Simpan pesan baru
+    if (request.method === "POST" && url.pathname === "/send") {
       try {
         const data = await request.json();
         data.timestamp = new Date().toISOString();
 
         // Ambil pesan lama
-        let messages = await env.CHAT_LOG.get("messages", { type: "json" });
-        if (!messages) messages = [];
+        const existing = await env.CHAT_LOG.get("messages");
+        const messages = existing ? JSON.parse(existing) : [];
 
         messages.push(data);
 
-        // Simpan ulang ke KV
+        // Simpan kembali ke KV
         await env.CHAT_LOG.put("messages", JSON.stringify(messages));
 
-        return new Response("Message saved", { status: 200 });
-      } catch (e) {
-        return new Response("Invalid JSON", { status: 400 });
+        return new Response("Pesan disimpan", { status: 200 });
+      } catch (err) {
+        return new Response("JSON invalid", { status: 400 });
       }
-    } else if (request.method === "GET") {
-      let messages = await env.CHAT_LOG.get("messages", { type: "json" });
-      if (!messages) messages = [];
-      return new Response(JSON.stringify(messages), {
+    }
+
+    // Ambil semua pesan
+    if (request.method === "GET" && url.pathname === "/messages") {
+      const stored = await env.CHAT_LOG.get("messages");
+      return new Response(stored || "[]", {
         headers: { "Content-Type": "application/json" },
       });
-    } else {
-      return new Response("Method Not Allowed", { status: 405 });
     }
+
+    // Endpoint tidak dikenali
+    return new Response("404 Not Found", { status: 404 });
   },
 };
