@@ -1,8 +1,14 @@
-[[durable_objects.bindings]]
-compatibility_date = "2025-06-08"
-name = "CHAT_ROOM"
+name = "chatroom-worker"
 main = "worker.js"
+compatibility_date = "2025-06-08"
+
+[[durable_objects.bindings]]
+name = "CHAT_ROOM"
 class_name = "ChatRoom"
+
+[[migrations]]
+tag = "v1"
+new_classes = ["ChatRoom"]
 
 [[kv_namespaces]]
 binding = "CHAT_LOG"
